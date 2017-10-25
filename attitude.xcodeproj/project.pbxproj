@@ -14,6 +14,7 @@
 		CE19A2421F9B7972006BCE33 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CE19A2401F9B7972006BCE33 /* Main.storyboard */; };
 		CE19A2441F9B7972006BCE33 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE19A2431F9B7972006BCE33 /* Assets.xcassets */; };
 		CE19A2471F9B7972006BCE33 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CE19A2451F9B7972006BCE33 /* LaunchScreen.storyboard */; };
+		CEF230C11F9F742300FBA936 /* extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEF230C01F9F742300FBA936 /* extensions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		CE19A2431F9B7972006BCE33 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CE19A2461F9B7972006BCE33 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		CE19A2481F9B7972006BCE33 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CEF230C01F9F742300FBA936 /* extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = extensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 				CE19A2431F9B7972006BCE33 /* Assets.xcassets */,
 				CE19A2451F9B7972006BCE33 /* LaunchScreen.storyboard */,
 				CE19A2481F9B7972006BCE33 /* Info.plist */,
+				CEF230C01F9F742300FBA936 /* extensions.swift */,
 			);
 			path = attitude;
 			sourceTree = "<group>";
@@ -82,6 +85,7 @@
 				CE19A2301F9B7972006BCE33 /* Sources */,
 				CE19A2311F9B7972006BCE33 /* Frameworks */,
 				CE19A2321F9B7972006BCE33 /* Resources */,
+				CE19A24E1F9B7992006BCE33 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -139,11 +143,28 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		CE19A24E1F9B7992006BCE33 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "buildNumber=$(/usr/libexec/PlistBuddy -c \"Print CFBundleVersion\" \"${PROJECT_DIR}/${INFOPLIST_FILE}\")\nbuildNumber=$(($buildNumber + 1))\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $buildNumber\" \"${PROJECT_DIR}/${INFOPLIST_FILE}\"";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		CE19A2301F9B7972006BCE33 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CEF230C11F9F742300FBA936 /* extensions.swift in Sources */,
 				CE19A23F1F9B7972006BCE33 /* Shaders.metal in Sources */,
 				CE19A23B1F9B7972006BCE33 /* Renderer.swift in Sources */,
 				CE19A23D1F9B7972006BCE33 /* GameViewController.swift in Sources */,

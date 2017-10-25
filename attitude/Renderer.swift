@@ -11,6 +11,8 @@
 import Metal
 import MetalKit
 import simd
+import CoreMotion
+import AudioToolbox
 
 // The 256 byte aligned size of our uniform structure
 let alignedUniformsSize = (MemoryLayout<Uniforms>.size & ~0xFF) + 0x100
@@ -29,7 +31,10 @@ class Renderer: NSObject, MTKViewDelegate {
     var pipelineState: MTLRenderPipelineState
     var depthState: MTLDepthStencilState
     var colorMap: MTLTexture
-    
+    let feedbackHeavy = UIImpactFeedbackGenerator(style: .heavy)
+    let feedbackMedium = UIImpactFeedbackGenerator(style: .medium)
+    let feedbackLight = UIImpactFeedbackGenerator(style: .light)
+
     let inFlightSemaphore = DispatchSemaphore(value: maxBuffersInFlight)
     
     var uniformBufferOffset = 0
@@ -43,7 +48,9 @@ class Renderer: NSObject, MTKViewDelegate {
     var rotation: Float = 0
     
     var mesh: MTKMesh
-    
+
+    let manager = CMMotionManager()
+
     init?(metalKitView: MTKView) {
         self.device = metalKitView.device!
         guard let queue = self.device.makeCommandQueue() else { return nil }
@@ -93,8 +100,13 @@ class Renderer: NSObject, MTKViewDelegate {
             return nil
         }
         
-        super.init()
+        if (manager.isDeviceMotionAvailable) {
+            manager.deviceMotionUpdateInterval = TimeInterval (1.0 / 60.0)
+            manager.showsDeviceMovementDisplay = true
+            manager.startDeviceMotionUpdates(using: .xArbitraryCorrectedZVertical)
+        }
         
+        super.init()
     }
     
     class func buildMetalVertexDescriptor() -> MTLVertexDescriptor {
@@ -152,11 +164,14 @@ class Renderer: NSObject, MTKViewDelegate {
         
         let metalAllocator = MTKMeshBufferAllocator(device: device)
         
-        let mdlMesh = MDLMesh.newBox(withDimensions: float3(4, 4, 4),
-                                     segments: uint3(2, 2, 2),
-                                     geometryType: MDLGeometryType.triangles,
-                                     inwardNormals:false,
-                                     allocator: metalAllocator)
+        let mdlMesh = MDLMesh.newPlane(withDimensions: [0.1,0.1], segments: [2,2], geometryType: .triangles, allocator: metalAllocator)
+//        let mdlMesh = MDLMesh.newBox(withDimensions: float3(1, 1, 1),
+//                                     segments: uint3(2, 2, 2),
+//                                     geometryType: MDLGeometryType.triangles,
+//                                     inwardNormals:false,
+//                                     allocator: metalAllocator)
+  
+//        let mdlMesh = MDLMesh.newEllipsoid(withRadii: [0.5,0.5,0.5], radialSegments: 20, verticalSegments: 20, geometryType: .triangles, inwardNormals: false, hemisphere: false, allocator: metalAllocator)
         
         let mdlVertexDescriptor = MTKModelIOVertexDescriptorFromMetal(mtlVertexDescriptor)
         
@@ -199,16 +214,63 @@ class Renderer: NSObject, MTKViewDelegate {
         uniforms = UnsafeMutableRawPointer(dynamicUniformBuffer.contents() + uniformBufferOffset).bindMemory(to:Uniforms.self, capacity:1)
     }
     
+    var v = simd_float3(0,0,0)
+    var p = simd_float3(0,0,0)
+    var ts = TimeInterval()
+    
+    let mass :Float = 50
+    let friction :Float = 0.1
+    
     private func updateGameState() {
         /// Update any game state before rendering
+        let now = NSDate().timeIntervalSinceReferenceDate
+        let dt = Float(now - ts)
+        ts = now
+        
         
         uniforms[0].projectionMatrix = projectionMatrix
         
-        let rotationAxis = float3(1, 1, 0)
-        let modelMatrix = matrix4x4_rotation(radians: rotation, axis: rotationAxis)
-        let viewMatrix = matrix4x4_translation(0.0, 0.0, -8.0)
-        uniforms[0].modelViewMatrix = simd_mul(viewMatrix, modelMatrix)
-        rotation += 0.01
+        if let data = manager.deviceMotion {
+        
+            //let modelMatrix = simd_float4x4(data.attitude.quaternion).inverse
+            let modelMatrix = matrix4x4_rotation(radians: Float.pi / 2, axis: [1,0,0])
+            
+            let g = simd_float3(data.gravity) + simd_float3(data.userAcceleration)
+            var collisionX = false
+            var collisionY = false
+
+            v = (1-friction) * v + mass * g * dt
+            v.z = 0
+            
+            p = p + v * dt
+            p.z = 0
+
+            if (p.x < -0.3 || p.x > 0.3) {
+                p.x = min(max(p.x,-0.3), 0.3)
+                v.x = -v.x
+                collisionX = true
+            }
+            
+            if (p.y < -0.58 || p.y > 0.58) {
+                p.y = min(max(p.y,-0.58), 0.58)
+                v.y = -v.y
+                collisionY = true
+            }
+            
+            
+            if ((collisionX && abs(v.x) > 0.5) || (collisionY && abs(v.y) > 0.5)) {
+                feedbackHeavy.impactOccurred()
+            } else if ((collisionX && abs(v.x) > 0.3) || (collisionY && abs(v.y) > 0.3)) {
+                feedbackMedium.impactOccurred()
+            } else if ((collisionX && abs(v.x) > 0.1) || (collisionY && abs(v.y) > 0.1)) {
+                feedbackLight.impactOccurred()
+            }
+            
+            print("g:\(g) v:\(v) p:\(p)")
+
+            let viewMatrix = matrix4x4_translation(p.x, p.y, -1.0)
+            uniforms[0].modelViewMatrix = simd_mul(viewMatrix, modelMatrix)
+        }
     }
     
     func draw(in view: MTKView) {
