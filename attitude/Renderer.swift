@@ -312,22 +312,24 @@ class Renderer: NSObject, MTKViewDelegate {
             
             
             forces = forces + frictions
+            
+            // elastic collisions with borders
+            if (p.x < -0.3 || p.x > 0.3) {
+                forces = forces + simd_float3((min(max(p.x,-0.3), 0.3) - p.x)*8000, 0, 0)
+                //v.x = -v.x
+                collisionX = true
+            }
+            if (p.y < -0.58 || p.y > 0.58) {
+                forces = forces + simd_float3(0, (min(max(p.y,-0.58), 0.58)-p.y)*8000, 0)
+                collisionY = true
+            }
+            
+
+            
 
             v = v + forces * dt
             p = p + v * dt
 
-            if (p.x < -0.3 || p.x > 0.3) {
-                p.x = min(max(p.x,-0.3), 0.3)
-                v.x = -v.x
-                collisionX = true
-            }
-            
-            if (p.y < -0.58 || p.y > 0.58) {
-                p.y = min(max(p.y,-0.58), 0.58)
-                v.y = -v.y
-                collisionY = true
-            }
-            
             
             if ((collisionX && abs(v.x) > 0.5) || (collisionY && abs(v.y) > 0.5)) {
                 impact = max(impact, 3)
